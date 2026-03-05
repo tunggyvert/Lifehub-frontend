@@ -9,6 +9,7 @@ class User {
   final DateTime createdAt;
   final int followers;
   final int following;
+  final bool? isFollowing; // Add this field for follow status
 
   User({
     required this.id,
@@ -21,6 +22,7 @@ class User {
     required this.createdAt,
     required this.followers,
     required this.following,
+    this.isFollowing,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -53,6 +55,9 @@ class User {
       createdAt: DateTime.parse((json['created_at'] ?? '').toString()),
       followers: parseInt(json['followers']),
       following: parseInt(json['following']),
+      isFollowing: json['is_following'] != null
+          ? parseBool(json['is_following'])
+          : null,
     );
   }
 

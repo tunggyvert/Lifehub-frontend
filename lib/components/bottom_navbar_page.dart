@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 'dart:async';
+
 import '../features/home/screen/home_screen.dart';
+import '../features/noti/screen/noti_screen.dart';
 import '../features/profile/screen/profile_screen.dart';
+import '../features/post/screen/create_post_screen.dart';
+import '../api/feat/noti_service.dart';
+import '../core/realtime/notification_realtime_service.dart';
 import 'app_colors.dart';
 import 'lifehub_bottom_navbar.dart';
 
@@ -14,49 +20,82 @@ class BottomNavbarPage extends StatefulWidget {
 
 class _BottomNavbarPageState extends State<BottomNavbarPage> {
   int _currentIndex = 0;
+  int _unreadCount = 0;
+  final NotiService _notiService = NotiService();
+  StreamSubscription? _rtSub;
 
-  static const List<Widget> _widgetPages = [
-    HomeScreen(),
-    _PlaceholderPage(title: 'Add'),
-    _PlaceholderPage(title: 'Notifications'),
-    ProfileScreen(),
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _currentIndex = index;
+  @override
+  void initState() {
+    super.initState();
+    _refreshUnreadCount();
+    NotificationRealtimeService.instance.connect();
+    _rtSub = NotificationRealtimeService.instance.stream.listen((_) {
+      if (!mounted) return;
+      _refreshUnreadCount();
     });
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _widgetPages.elementAt(_currentIndex),
-      bottomNavigationBar: LifehubBottomNavbar(
-        currentIndex: _currentIndex,
-        onTap: _onItemTapped,
-        backgroundColor: AppColors.primaryOrange,
-        selectedColor: Colors.blue,
-        unselectedColor: Colors.black,
-      ),
-    );
+  void dispose() {
+    _rtSub?.cancel();
+    super.dispose();
   }
-}
 
-class _PlaceholderPage extends StatelessWidget {
-  final String title;
+  Future<void> _refreshUnreadCount() async {
+    try {
+      final count = await _notiService.getUnreadCount();
+      if (!mounted) return;
+      setState(() {
+        _unreadCount = count;
+      });
+    } catch (_) {
+      // ignore
+    }
+  }
 
-  const _PlaceholderPage({required this.title});
+  void _onItemTapped(int index) async {
+    if (index == 1) {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const CreatePostScreen()),
+      );
+
+      if (result == true) {
+        setState(() {
+          _currentIndex = 0; // กลับหน้า Home
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      _currentIndex = index;
+    });
+
+    if (index == 2) {
+      _refreshUnreadCount();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      const HomeScreen(),
+      const SizedBox(),
+      NotiScreen(onUnreadChanged: _refreshUnreadCount),
+      const ProfileScreen(),
+    ];
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundWhite,
-      body: Center(
-        child: Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
+      // 2. ใช้ IndexedStack เพื่อเก็บสถานะของแต่ละหน้าไว้ในหน่วยความจำ
+      body: IndexedStack(index: _currentIndex, children: pages),
+      bottomNavigationBar: LifehubBottomNavbar(
+        currentIndex: _currentIndex,
+        onTap: _onItemTapped,
+        unreadNotificationCount: _unreadCount,
+        backgroundColor: AppColors.primaryOrange,
+        selectedColor: Colors.blue,
+        unselectedColor: Colors.black,
       ),
     );
   }

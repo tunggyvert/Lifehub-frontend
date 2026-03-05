@@ -47,14 +47,36 @@ class ApiService {
     debugPrint('[ApiService] $method $url -> ${response.statusCode}');
   }
 
-  Future<http.Response> post(String endpoint, Map<String, dynamic> body) async {
+  Future<http.Response> delete(String endpoint, {String? token}) async {
     final url = Uri.parse('$baseURL$endpoint');
+    final headers = <String, String>{};
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    final response = await http.delete(url, headers: headers);
+    return response;
+  }
+
+  Future<http.Response> post(
+    String endpoint,
+    Map<String, dynamic> body, {
+    String? token,
+  }) async {
+    final url = Uri.parse('$baseURL$endpoint');
+    final headers = {'Content-Type': 'application/json'};
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
     try {
-      final headers = {'Content-Type': 'application/json'};
       _debugLogRequest('POST', url, headers: headers);
-      return await http
+      final response = await http
           .post(url, headers: headers, body: jsonEncode(body))
           .timeout(timeout);
+
+      _debugLogResponse('POST', url, response);
+      return response;
     } on TimeoutException catch (e) {
       throw ApiException('Request timeout', url: url, cause: e);
     } catch (e) {
@@ -74,6 +96,32 @@ class ApiService {
       _debugLogRequest('GET', url, headers: headers);
       final response = await http.get(url, headers: headers).timeout(timeout);
       _debugLogResponse('GET', url, response);
+      return response;
+    } on TimeoutException catch (e) {
+      throw ApiException('Request timeout', url: url, cause: e);
+    } catch (e) {
+      throw ApiException('Request failed', url: url, cause: e);
+    }
+  }
+
+  Future<http.Response> put(
+    String endpoint,
+    Map<String, dynamic> body, {
+    String? token,
+  }) async {
+    final url = Uri.parse('$baseURL$endpoint');
+    final headers = {'Content-Type': 'application/json'};
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    try {
+      _debugLogRequest('PUT', url, headers: headers);
+      final response = await http
+          .put(url, headers: headers, body: jsonEncode(body))
+          .timeout(timeout);
+
+      _debugLogResponse('PUT', url, response);
       return response;
     } on TimeoutException catch (e) {
       throw ApiException('Request timeout', url: url, cause: e);

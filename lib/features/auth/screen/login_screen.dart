@@ -5,6 +5,8 @@ import '../components/widgets/custom_button.dart';
 import '../components/widgets/app_title.dart';
 
 import '../../../api/feat/auth_service.dart';
+import '../../../core/storage/token_storage_test.dart';
+import 'package:flutter/foundation.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,6 +28,15 @@ class _LoginScreenState extends State<LoginScreen> {
   final _authService = AuthService();
 
   @override
+  void initState() {
+    super.initState();
+    // Run token storage test in debug mode
+    if (kDebugMode) {
+      TokenStorageTest.runTests();
+    }
+  }
+
+  @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
@@ -36,26 +47,50 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_isLoading) return;
     setState(() => _isLoading = true);
 
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text;
+
+    debugPrint('[LoginScreen] Attempting login for user: $username');
+
     try {
-      await _authService.login(
-        _usernameController.text,
-        _passwordController.text,
-      );
+      await _authService.login(username, password);
 
       if (!mounted) return;
 
+      debugPrint('[LoginScreen] Login successful, navigating to home');
       context.go('/home');
-    } on AuthException {
+    } on AuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')),
-      );
-    } catch (e) {
-      if (!mounted) return;
+      debugPrint('[LoginScreen] AuthException: ${e.toString()}');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('ไม่สามารถเชื่อมต่อ server ได้: $e'),
+          content: Text('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'),
           backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e, stackTrace) {
+      if (!mounted) return;
+      debugPrint('[LoginScreen] Unexpected error: $e');
+      debugPrint('[LoginScreen] Stack trace: $stackTrace');
+
+      String errorMessage = 'ไม่สามารถเชื่อมต่อ server ได้: $e';
+
+      // Check for common issues
+      if (e.toString().contains('MissingPluginException')) {
+        errorMessage = 'พบปัญหากับ secure storage กรุณา restart แอปพลิเคชัน';
+      } else if (e.toString().contains('Network') ||
+          e.toString().contains('Connection')) {
+        errorMessage =
+            'ไม่สามารถเชื่อมต่ออินเทอร์เน็ต กรุณาตรวจสอบการเชื่อมต่อ';
+      } else if (e.toString().contains('Timeout')) {
+        errorMessage = 'การเชื่อมต่อหมดเวลา กรุณาลองใหม่';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
         ),
       );
     } finally {

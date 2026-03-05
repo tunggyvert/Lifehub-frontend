@@ -6,6 +6,7 @@ class LifehubBottomNavbar extends StatelessWidget {
   final Color backgroundColor;
   final Color selectedColor;
   final Color unselectedColor;
+  final int unreadNotificationCount;
 
   const LifehubBottomNavbar({
     super.key,
@@ -14,6 +15,7 @@ class LifehubBottomNavbar extends StatelessWidget {
     required this.backgroundColor,
     required this.selectedColor,
     required this.unselectedColor,
+    this.unreadNotificationCount = 0,
   });
 
   @override
@@ -48,6 +50,7 @@ class LifehubBottomNavbar extends StatelessWidget {
             index: 2,
             currentIndex: currentIndex,
             onTap: onTap,
+            badgeCount: unreadNotificationCount,
             selectedColor: selectedColor,
             unselectedColor: unselectedColor,
           ),
@@ -72,6 +75,7 @@ class _NavItem extends StatelessWidget {
   final ValueChanged<int> onTap;
   final Color selectedColor;
   final Color unselectedColor;
+  final int badgeCount;
 
   const _NavItem({
     required this.icon,
@@ -80,6 +84,7 @@ class _NavItem extends StatelessWidget {
     required this.onTap,
     required this.selectedColor,
     required this.unselectedColor,
+    this.badgeCount = 0,
   });
 
   @override
@@ -94,13 +99,45 @@ class _NavItem extends StatelessWidget {
         width: 56,
         height: 44,
         decoration: BoxDecoration(
-          color: isSelected ? selectedColor.withValues(alpha: 0.2) : Colors.transparent,
+          color: isSelected
+              ? selectedColor.withValues(alpha: 0.2)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(999),
         ),
-        child: Icon(
-          icon,
-          color: isSelected ? selectedColor : unselectedColor,
-          size: 26,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Center(
+              child: Icon(
+                icon,
+                color: isSelected ? selectedColor : unselectedColor,
+                size: 26,
+              ),
+            ),
+            if (badgeCount > 0)
+              Positioned(
+                right: 6,
+                top: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    badgeCount > 99 ? '99+' : badgeCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
