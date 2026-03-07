@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class PostCard extends StatelessWidget {
   final String imageUrl;
   final String? caption;
+  final int userId;
   final String username;
   final String? profileImageUrl;
   final int likeCount;
@@ -10,15 +11,19 @@ class PostCard extends StatelessWidget {
   final bool isLiked;
   final bool isLiking;
   final DateTime createdAt;
+  final int currentUserId;
   final VoidCallback? onTap;
   final VoidCallback? onLikePressed;
   final VoidCallback? onCommentPressed;
   final VoidCallback? onUserTap;
+  final VoidCallback? onEditPressed;
+  final VoidCallback? onDeletePressed;
 
   const PostCard({
     super.key,
     required this.imageUrl,
     this.caption,
+    required this.userId,
     required this.username,
     this.profileImageUrl,
     required this.likeCount,
@@ -26,10 +31,13 @@ class PostCard extends StatelessWidget {
     required this.isLiked,
     this.isLiking = false,
     required this.createdAt,
+    required this.currentUserId,
     this.onTap,
     this.onLikePressed,
     this.onCommentPressed,
     this.onUserTap,
+    this.onEditPressed,
+    this.onDeletePressed,
   });
 
   String _formatDate() {
@@ -110,7 +118,48 @@ class PostCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(Icons.more_horiz, color: Colors.grey[400], size: 20),
+                  if (currentUserId == userId)
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_horiz,
+                        color: Colors.grey[400],
+                        size: 20,
+                      ),
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          onEditPressed?.call();
+                        } else if (value == 'delete') {
+                          onDeletePressed?.call();
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, size: 20),
+                              SizedBox(width: 8),
+                              Text('แก้ไขโพสต์'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'ลบโพสต์',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Icon(Icons.more_horiz, color: Colors.grey[400], size: 20),
                 ],
               ),
             ),

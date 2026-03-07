@@ -52,7 +52,9 @@ class User {
       bio: json['bio'],
       profileImage: json['profile_image'],
       isVerified: parseBool(json['is_verified']),
-      createdAt: DateTime.parse((json['created_at'] ?? '').toString()),
+      createdAt:
+          DateTime.tryParse((json['created_at'] ?? '').toString()) ??
+          DateTime.now(),
       followers: parseInt(json['followers']),
       following: parseInt(json['following']),
       isFollowing: json['is_following'] != null

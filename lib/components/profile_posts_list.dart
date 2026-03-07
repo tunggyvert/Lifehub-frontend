@@ -5,11 +5,17 @@ import 'package:go_router/go_router.dart';
 class ProfilePostsList extends StatelessWidget {
   final List<Post> posts;
   final VoidCallback onPostUpdated;
+  final int currentUserId;
+  final Function(Post) onEditPost;
+  final Function(Post) onDeletePost;
 
   const ProfilePostsList({
     super.key,
     required this.posts,
     required this.onPostUpdated,
+    required this.currentUserId,
+    required this.onEditPost,
+    required this.onDeletePost,
   });
 
   @override
@@ -132,6 +138,50 @@ class ProfilePostsList extends StatelessWidget {
                                 color: Colors.grey[400],
                               ),
                             ),
+                            if (currentUserId == post.userId)
+                              PopupMenuButton<String>(
+                                icon: Icon(
+                                  Icons.more_horiz,
+                                  color: Colors.grey[400],
+                                  size: 20,
+                                ),
+                                onSelected: (value) {
+                                  if (value == 'edit') {
+                                    onEditPost(post);
+                                  } else if (value == 'delete') {
+                                    onDeletePost(post);
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'edit',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.edit, size: 20),
+                                        SizedBox(width: 8),
+                                        Text('แก้ไขโพสต์'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'delete',
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.delete,
+                                          color: Colors.red,
+                                          size: 20,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'ลบโพสต์',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                           ],
                         ),
                       ],

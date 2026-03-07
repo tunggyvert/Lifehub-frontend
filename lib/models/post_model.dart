@@ -35,10 +35,12 @@ class Post {
       id: parseIntStatic(json['id']),
       userId: parseIntStatic(json['user_id']),
       caption: json['caption'],
-      imageUrl: json['image_url'],
+      imageUrl: json['image_url'] ?? '',
       username: (json['username'] ?? '').toString(),
       profileImage: json['profile_image'],
-      createdAt: DateTime.parse((json['created_at'] ?? '').toString()),
+      createdAt:
+          DateTime.tryParse((json['created_at'] ?? '').toString()) ??
+          DateTime.now(),
       likeCount: parseIntStatic(json['like_count']),
       commentCount: parseIntStatic(json['comment_count']),
       isLiked: json['is_liked'] == true || json['is_liked'] == 1,

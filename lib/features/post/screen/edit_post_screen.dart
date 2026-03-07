@@ -1,24 +1,42 @@
 import 'package:flutter/material.dart';
-import '../../../../api/feat/post_api.dart';
+import '../../../api/feat/post_api.dart';
+import '../../../models/post_model.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
-class CreatePostScreen extends StatefulWidget {
-  const CreatePostScreen({super.key});
+class EditPostScreen extends StatefulWidget {
+  final Post post;
+
+  const EditPostScreen({super.key, required this.post});
 
   @override
-  State<CreatePostScreen> createState() => _CreatePostScreenState();
+  State<EditPostScreen> createState() => _EditPostScreenState();
 }
 
-class _CreatePostScreenState extends State<CreatePostScreen> {
+class _EditPostScreenState extends State<EditPostScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
+  late String _currentImageUrl;
 
   final Color primaryDark = const Color(0xFF1A1A2E);
   final Color accentOrange = const Color(0xFFF07B3F);
+
+  @override
+  void initState() {
+    super.initState();
+    _currentImageUrl = widget.post.imageUrl;
+
+    // Split caption into title and content (first line = title, rest = content)
+    final caption = widget.post.caption ?? '';
+    final lines = caption.split('\n');
+    _titleController.text = lines.isNotEmpty ? lines.first : '';
+    _contentController.text = lines.length > 1
+        ? lines.sublist(1).join('\n')
+        : '';
+  }
 
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(
@@ -30,25 +48,33 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
-  Future<void> _submitPost() async {
+  Future<void> _submitEdit() async {
     if (_isLoading) return;
 
     setState(() => _isLoading = true);
     try {
       final postApi = PostApi();
-      final imageUrl = await postApi.uploadImage(_selectedImage!);
+      String? newImageUrl;
 
-      //API
-      await postApi.createPost(
-        caption: "${_titleController.text}\n${_contentController.text}",
-        image_url: imageUrl,
-      );
+      // Upload new image if selected
+      if (_selectedImage != null) {
+        newImageUrl = await postApi.uploadImage(_selectedImage!);
+      }
+
+      // Combine title and content
+      final caption = _contentController.text.isNotEmpty
+          ? "${_titleController.text}\n${_contentController.text}"
+          : _titleController.text;
+
+      await postApi.editPost(widget.post.id, caption, imageUrl: newImageUrl);
 
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('เกิดข้อผิดพลาด: ${e.toString()}')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -70,7 +96,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         elevation: 0,
         centerTitle: true,
         title: Text(
-          "CREATE POST",
+          "EDIT POST",
           style: TextStyle(
             color: primaryDark,
             fontWeight: FontWeight.w900,
@@ -92,14 +118,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 _buildImageFrame(),
                 const SizedBox(height: 24),
                 _buildInputSection(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 80),
               ],
             ),
           ),
           if (_isLoading) _buildLoadingOverlay(),
         ],
       ),
-      //ปุ่มโพสต์
       bottomSheet: Container(
         color: Colors.white,
         padding: const EdgeInsets.fromLTRB(24, 10, 24, 16),
@@ -108,10 +133,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
-  //แสดงรูปภาพ
   Widget _buildImageFrame() {
     return GestureDetector(
-      onTap: _selectedImage == null ? _pickImage : null,
+      onTap: _pickImage,
       child: Container(
         width: double.infinity,
         height: 280,
@@ -129,58 +153,86 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
-          child: _selectedImage == null
-              ? Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.add_a_photo_outlined,
-                      color: accentOrange,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Show local file if picked, otherwise show network image
+              if (_selectedImage != null)
+                Image.file(_selectedImage!, fit: BoxFit.cover)
+              else
+                Image.network(
+                  _currentImageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Center(
+                    child: Icon(
+                      Icons.broken_image_rounded,
                       size: 40,
+                      color: Colors.grey[400],
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      "เพิ่มรูป",
-                      style: TextStyle(
-                        color: primaryDark.withOpacity(0.4),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                        letterSpacing: 1,
+                  ),
+                ),
+              // Change image overlay button
+              Positioned(
+                bottom: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.camera_alt_outlined,
+                        color: Colors.white,
+                        size: 16,
                       ),
-                    ),
-                  ],
-                )
-              : Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.file(_selectedImage!, fit: BoxFit.cover),
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedImage = null),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                            size: 18,
-                          ),
+                      SizedBox(width: 6),
+                      Text(
+                        'เปลี่ยนรูป',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+              ),
+              // Reset to original image (if a new one was picked)
+              if (_selectedImage != null)
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedImage = null),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.undo,
+                        color: Colors.red,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  //กรอกเนื้อหา
   Widget _buildInputSection() {
     return Container(
       decoration: BoxDecoration(
@@ -199,8 +251,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             ),
             decoration: InputDecoration(
               hintText: "หัวข้อโพสต์ของคุณ",
-              hintStyle: TextStyle(
-                color: const Color.fromARGB(255, 121, 121, 121),
+              hintStyle: const TextStyle(
+                color: Color.fromARGB(255, 121, 121, 121),
               ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
@@ -217,8 +269,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             ),
             decoration: InputDecoration(
               hintText: "เขียนรายละเอียดเพิ่มเติม",
-              hintStyle: TextStyle(
-                color: const Color.fromARGB(255, 121, 121, 121),
+              hintStyle: const TextStyle(
+                color: Color.fromARGB(255, 121, 121, 121),
               ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(20),
@@ -234,7 +286,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       width: double.infinity,
       height: 58,
       child: ElevatedButton(
-        onPressed: _isLoading ? null : _submitPost,
+        onPressed: _isLoading ? null : _submitEdit,
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryDark,
           foregroundColor: Colors.white,
@@ -254,7 +306,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 ),
               )
             : const Text(
-                "โพสต์",
+                "บันทึกการแก้ไข",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.5,

@@ -117,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 CustomTextField(
                   controller: _usernameController,
                   hint: 'ชื่อผู้ใช้',
-                  icon: Icons.email_outlined,
+                  icon: Icons.person,
                   primaryColor: primaryOrange,
                 ),
                 const SizedBox(height: 16),

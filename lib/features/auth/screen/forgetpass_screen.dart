@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-// import 'package:go_router/go_router.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lifehub/features/auth/components/widgets/app_title.dart';
 import 'package:lifehub/features/auth/components/widgets/custom_button.dart';
 import 'package:lifehub/features/auth/components/widgets/custom_text_field.dart';
@@ -12,7 +12,6 @@ class ForgetpassScreen extends StatefulWidget {
 }
 
 class _ForgetpassScreenState extends State<ForgetpassScreen> {
-
   final _emailController = TextEditingController();
   final Color primaryOrange = const Color(0xFFF07B3F);
   final Color backgroundWhite = const Color(0xFFFAFAFA);
@@ -26,6 +25,14 @@ class _ForgetpassScreenState extends State<ForgetpassScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            context.go('/login');
+          },
+        ),
+      ),
       backgroundColor: backgroundWhite,
       body: SafeArea(
         child: Center(
@@ -37,20 +44,20 @@ class _ForgetpassScreenState extends State<ForgetpassScreen> {
                 const SizedBox(height: 48),
 
                 CustomTextField(
-                controller: _emailController, 
-                hint: 'อีเมล', 
-                icon: Icons.email_outlined,
-                primaryColor: primaryOrange,
+                  controller: _emailController,
+                  hint: 'อีเมล',
+                  icon: Icons.email_outlined,
+                  primaryColor: primaryOrange,
                 ),
                 const SizedBox(height: 16),
 
                 CustomButton(text: 'ตกลง', onPressed: () {}),
-                const SizedBox(height: 16,),
-              ]
+                const SizedBox(height: 16),
+              ],
             ),
           ),
         ),
-      )
+      ),
     );
   }
 }

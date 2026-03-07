@@ -25,6 +25,25 @@ class PostApi {
     }
   }
 
+  Future<List<Post>> getFollowingPosts() async {
+    final token = await TokenStorage.getToken();
+
+    final response = await _apiService.get(
+      '/api/posts/following',
+      token: token,
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+
+      final List data = decoded is List ? decoded : decoded['data'];
+
+      return data.map((e) => Post.fromJson(e)).toList();
+    } else {
+      throw Exception('Failed to load following posts');
+    }
+  }
+
   Future<Post> getPostById(int postId) async {
     final token = await TokenStorage.getToken();
 
@@ -272,6 +291,47 @@ class PostApi {
       return decoded['data'] ?? [];
     } else {
       throw Exception("Failed to refresh comments");
+    }
+  }
+
+  Future<void> editPost(
+    int postId,
+    String newCaption, {
+    String? imageUrl,
+  }) async {
+    final token = await TokenStorage.getToken();
+    if (token == null) throw Exception("User not logged in.");
+
+    final body = <String, dynamic>{'caption': newCaption};
+    if (imageUrl != null) {
+      body['image_url'] = imageUrl;
+    }
+
+    final response = await http.put(
+      Uri.parse('${ApiService.baseURL}/api/posts/$postId'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception("Failed to edit post");
+    }
+  }
+
+  Future<void> deletePost(int postId) async {
+    final token = await TokenStorage.getToken();
+    if (token == null) throw Exception("User not logged in.");
+
+    final response = await http.delete(
+      Uri.parse('${ApiService.baseURL}/api/posts/$postId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception("Failed to delete post");
     }
   }
 }

@@ -5,6 +5,7 @@ import '../../../api/feat/post_api.dart';
 import '../../../models/user_model.dart';
 import '../../../models/post_model.dart';
 import '../../../core/storage/token_storage.dart';
+import '../../../core/auth/jwt_utils.dart';
 import 'edit_profile_screen.dart';
 
 // Components
@@ -29,6 +30,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoadingPosts = false;
   String? _error;
   bool _isGridView = true;
+  int? _currentUserId;
 
   @override
   void initState() {
@@ -82,6 +84,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _user = user;
         _isLoading = false;
       });
+
+      final userId = JwtUtils.userIdFromToken(token);
+      if (userId != null) {
+        setState(() {
+          _currentUserId = userId;
+        });
+      }
+
       _loadUserPosts();
     } catch (e) {
       setState(() {
@@ -207,17 +217,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _loadUserProfile,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF07B3F),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: _loadUserProfile,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF07B3F),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text('ลองใหม่'),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-            ),
-            child: const Text('ลองใหม่'),
+              const SizedBox(width: 16),
+              OutlinedButton(
+                onPressed: _performLogout,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text('ออกจากระบบ'),
+              ),
+            ],
           ),
         ],
       ),
@@ -432,6 +466,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _handleEditPost(Post post) async {
+    final result = await context.push<bool>('/edit-post', extra: post);
+    if (result == true) {
+      _loadUserPosts();
+    }
+  }
+
+  Future<void> _handleDeletePost(Post post) async {
+    final bool? confirmDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('ลบโพสต์'),
+          content: const Text(
+            'คุณแน่ใจหรือไม่ว่าต้องการลบโพสต์นี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('ยกเลิก'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('ลบ', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmDelete == true) {
+      try {
+        await _postApi.deletePost(post.id);
+        _loadUserPosts();
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('ลบโพสต์เรียบร้อยแล้ว')));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('เกิดข้อผิดพลาด: ${e.toString()}')),
+          );
+        }
+      }
+    }
+  }
+
   Widget _buildPostsSection() {
     if (_isLoadingPosts) {
       return const SliverToBoxAdapter(
@@ -445,7 +529,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (_isGridView) {
       return ProfilePostsGrid(posts: _userPosts, onPostUpdated: _loadUserPosts);
     } else {
-      return ProfilePostsList(posts: _userPosts, onPostUpdated: _loadUserPosts);
+      return ProfilePostsList(
+        posts: _userPosts,
+        onPostUpdated: _loadUserPosts,
+        currentUserId: _currentUserId ?? 0,
+        onEditPost: _handleEditPost,
+        onDeletePost: _handleDeletePost,
+      );
     }
   }
 }

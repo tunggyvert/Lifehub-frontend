@@ -39,6 +39,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
   List<Post> _userPosts = [];
   bool _isLoadingPosts = false;
   bool _isGridView = true;
+  int? _currentUserId;
 
   @override
   void initState() {
@@ -67,7 +68,10 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
 
     _isOwnProfile = currentUserId == widget.userId;
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _currentUserId = currentUserId;
+      _isLoading = true;
+    });
     try {
       final user = await _userService.getUserProfile(widget.userId);
       setState(() {
@@ -461,7 +465,13 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
     if (_isGridView) {
       return ProfilePostsGrid(posts: _userPosts, onPostUpdated: _loadUserPosts);
     } else {
-      return ProfilePostsList(posts: _userPosts, onPostUpdated: _loadUserPosts);
+      return ProfilePostsList(
+        posts: _userPosts,
+        onPostUpdated: _loadUserPosts,
+        currentUserId: _currentUserId ?? 0,
+        onEditPost: (post) {},
+        onDeletePost: (post) {},
+      );
     }
   }
 }

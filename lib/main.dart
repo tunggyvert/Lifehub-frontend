@@ -8,6 +8,7 @@ import 'features/auth/screen/login_screen.dart';
 import 'features/auth/screen/register_screen.dart';
 import 'features/auth/screen/resetpass_screen.dart';
 import 'features/post/screen/post_detail_screen.dart';
+import 'features/post/screen/edit_post_screen.dart';
 import 'features/profile/screen/other_user_profile_screen.dart';
 import 'models/post_model.dart';
 
@@ -66,7 +67,17 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/post-detail',
       builder: (context, state) {
-        final post = state.extra as Post;
+        final extra = state.extra;
+        Post post;
+
+        if (extra is Post) {
+          post = extra;
+        } else if (extra is Map<String, dynamic>) {
+          post = Post.fromJson(extra);
+        } else {
+          throw Exception('Invalid post data passed to /post-detail');
+        }
+
         return PostDetailScreen(post: post);
       },
     ),
@@ -84,6 +95,13 @@ final GoRouter _router = GoRouter(
         );
       },
     ),
+    GoRoute(
+      path: '/edit-post',
+      builder: (context, state) {
+        final post = state.extra as Post;
+        return EditPostScreen(post: post);
+      },
+    ),
   ],
 );
 
@@ -94,6 +112,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'LifeHub',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
